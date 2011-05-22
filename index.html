@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+	<style type="text/css">
+		#editEntry, #askView, #nothingToDo {
+			text-align: center;
+		}
+		#entryList table{
+			margin: auto;
+			text-align: left;
+			border: 1px solid;
+		}
+		#header {
+			margin-bottom: 20px;
+		}
+		#frontColumn, #backColumn {
+			width: 200px;
+		}
+		#entryList td, #entryList th {
+			padding-right: 10px;
+		}
+		#qualityHelp {
+			text-align: left;
+			list-style: none;
+			margin-top: 50px;
+		}
+	</style>
+</head>
+<body>
+	<div id="header">
+		<a id="showEntryListAction" href="#"><span id="entryCnt">xx</span> entries</a>
+		<a id="createNewAction" href="#">create new</a>
+		<a id="practiseAction" href="#">practise</a>
+	</div>
+	<div id="editEntry" style="display: none">
+		Front:<br />
+		<textarea id="frontEdit" rows="3" cols="40"></textarea><br /><br />
+		Back:<br />
+		<textarea id="backEdit" rows="3" cols="40"></textarea><br /><br />
+		<a id="saveEntryAction" href="#">save</a>
+	</div>
+	<div id="entryList" style="display: none">
+		<table>
+			<thead>
+				<tr>
+					<th id="frontColumn">Front</th>
+					<th id="backColumn">Back</th>
+					<th class="infoColumn">Last seen</th>
+					<th class="infoColumn">Interval</th>
+					<th class="infoColumn">Ease factor</th>
+					<th></th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody id="entryListTableBody">
+			</tbody>
+		</table>
+	</div>
+	<div id="askView">
+		<div id="question"></div>
+		<br />
+		<textarea id="scratchPad" rows="3" cols="40"></textarea><br /><br />
+		<div id="questionDiv">
+			<br />
+			<input type="button" id="showAnswerAction" value="show answer" />
+		</div>
+		<div id="answerDiv" style="display:none">
+			<b>Answer:</b><div id="answer"></div><br />
+			<div id="answerButtons">
+				<input type="button" name="answeredAction" value="0" />
+				<input type="button" name="answeredAction" value="1" />
+				<input type="button" name="answeredAction" value="2" />
+				<input type="button" name="answeredAction" value="3" />
+				<input type="button" name="answeredAction" value="4" />
+				<input type="button" name="answeredAction" value="5" />
+			</div>
+			<ul id="qualityHelp">
+				<li>0 - complete blackout</li>
+				<li>1 - incorrect response; the correct one remembered</li>
+				<li>2 - incorrect response; where the correct one seemed easy to recall</li>
+				<li>3 - correct response recalled with serious difficulty</li>
+				<li>4 - correct response after a hesitation</li>
+				<li>5 - perfect response</li>
+			</ul>
+		</div>
+	</div>
+	<div id="nothingToDo">Nothing to be done</div>
+</body>
+<script type="text/javascript" src="js/words-lang.js"></script>
+</html>
