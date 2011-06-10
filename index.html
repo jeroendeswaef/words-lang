@@ -25,18 +25,21 @@
 			list-style: none;
 			margin-top: 50px;
 		}
-		#logoutAction {
+		#saveToWebAction, #logoutAction {
 			float: right;
+			margin-left: 5px;
 		}
 	</style>
 </head>
 <body>
-	<div id="allContent">
+	<div id="allContent" style="display: none">
 		<div id="header">
 			<a id="showEntryListAction" href="#"><span id="entryCnt">xx</span> entries</a>
 			<a id="createNewAction" href="#">create new</a>
 			<a id="practiseAction" href="#">practise</a>
+			
 			<a id="logoutAction" href="#">log out</a>
+			<a id="saveToWebAction" href="#">save to web</a>
 		</div>
 		<div id="editEntry" style="display: none">
 			Front:<br />
@@ -94,11 +97,11 @@
 		<div id="nothingToDo">Nothing to be done</div>
 	</div><!-- /allContent -->
 </body>
-<script type="text/javascript" src="js/words-lang.js"></script>
+<script type="text/javascript" src="words-lang.js"></script>
 <!-- for the communication with S3 -->
-<script type="text/javascript" src="js/json2.js"></script>
-<script type="text/javascript" src="js/sha1.js"></script>
-<script type="text/javascript" src="js/S3Ajax.js"></script>
-<script type="text/javascript" src="js/js3db.js"></script>
-<script type="text/javascript" src="js/amazon-s3-connector.js"></script>
+<script type="text/javascript" src="json2.js"></script>
+<script type="text/javascript" src="sha1.js"></script>
+<script type="text/javascript" src="S3Ajax.js"></script>
+<script type="text/javascript" src="js3db.js"></script>
+<script type="text/javascript" src="amazon-s3-connector.js"></script>
 </html>

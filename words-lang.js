@@ -1,6 +1,7 @@
 if (typeof console === 'undefined') {
 	console = {
-		log: function() {}
+		log: function() {},
+		error: function() {}
 	}
 }
 
@@ -19,7 +20,8 @@ Function.method('bindThis', function(that) {
 wordsLang = {
 	app: {
 		entries: [],
-	
+		externalStorage: null,
+		
 		init: function() {
 			if(wordsLang.utilities.supportsLocalStorage()) {
 				this.entryCntElement = document.getElementById('entryCnt');
@@ -38,6 +40,7 @@ wordsLang = {
 				document.getElementById('showEntryListAction').addEventListener('click', wordsLang.app.showEntryList, true);
 				document.getElementById('practiseAction').addEventListener('click', wordsLang.app.showPractiseView, true);
 				document.getElementById('showAnswerAction').addEventListener('click', this.showAnswer.bindThis(this), true);
+				document.getElementById('saveToWebAction').addEventListener('click', this.saveToWeb.bindThis(this), true);
 				window.addEventListener('keypress', this.respondToKeypress.bindThis(this), true);
 				
 				answerActionElements = document.getElementsByName('answeredAction')
@@ -89,6 +92,21 @@ wordsLang = {
 					+ lastSeenStr + "|-|" + entry.interval + "|-|" + entry.easeFactor
 				localStorage.setItem("wordsLangEntry-" + i, entryStr);
 			}
+		},
+		
+		saveToWeb: function() {
+			var jsonStr = JSON.stringify(this.entries);
+			console.log('save to web', jsonStr);
+			if(this.externalStorage != null) {
+				this.externalStorage.save(jsonStr);
+			}
+		},
+		
+		// storage must be an object with the following methods:
+		// save (json)
+		// load (json)
+		registerExternalStorage: function(storage) {
+			this.externalStorage = storage;
 		},
 		
 		clickAnswer: function(event) {
