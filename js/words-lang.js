@@ -1,3 +1,20 @@
+if (typeof console === 'undefined') {
+	console = {
+		log: function() {}
+	}
+}
+
+Function.prototype.method = function (name, func) { 
+    this.prototype[name] = func; 
+    return this; 
+}; 
+
+Function.method('bindThis', function(that) {
+	var method = this;
+	return function() {
+		return method.apply(that, arguments);
+	};
+});
 
 wordsLang = {
 	app: {
@@ -16,15 +33,16 @@ wordsLang = {
 				this.activeView = 'askView';
 				this.currentQuestionEntryId = null;
 				
-				document.getElementById('createNewAction').addEventListener('click', wordsLang.app.addEntry, true);
+				document.getElementById('createNewAction').addEventListener('click', this.addEntry.bindThis(this), true);
 				this.saveEntryActionElement.addEventListener('click', wordsLang.app.saveEntry, true);
 				document.getElementById('showEntryListAction').addEventListener('click', wordsLang.app.showEntryList, true);
 				document.getElementById('practiseAction').addEventListener('click', wordsLang.app.showPractiseView, true);
-				document.getElementById('showAnswerAction').addEventListener('click', this.showAnswer, true);
+				document.getElementById('showAnswerAction').addEventListener('click', this.showAnswer.bindThis(this), true);
+				window.addEventListener('keypress', this.respondToKeypress.bindThis(this), true);
 				
 				answerActionElements = document.getElementsByName('answeredAction')
 				for(var i = 0; i < answerActionElements.length; i++) {
-					answerActionElements[i].addEventListener('click', this.answer, true);
+					answerActionElements[i].addEventListener('click', this.answer.bindThis(this), true);
 				}
 				
 				this.fillFromLocalStorage();
@@ -50,7 +68,9 @@ wordsLang = {
 				var entry = {	
 					front: parts[0],
 					back: parts[1],
-					lastSeen: lastSeen
+					lastSeen: lastSeen,
+					interval: parts[3],
+					easeFactor: parts[4]
 				}
 				wordsLang.app.entries.push(entry);
 			}
@@ -71,20 +91,32 @@ wordsLang = {
 			}
 		},
 		
-		answer: function() {
-			var quality = parseInt(this.getAttribute('value'))
-			var entry = wordsLang.app.getCurrentEntry();
+		clickAnswer: function(event) {
+			var quality = parseInt(event.currentTarget.getAttribute('value'));
+			this.answer(quality);
+		},
+		
+		answer: function(quality) {
+			var entry = this.getCurrentEntry();
 			var now = new Date();
 			entry.lastSeen = now;
 			entry.interval++;
-			entry.easeFactor = entry.easeFactor +(0.1-(5-quality)*(0.08+(5-quality)*0.02))
-			wordsLang.app.saveToLocalStorage();
+			entry.easeFactor = parseFloat(entry.easeFactor) + (0.1-(5-quality)*(0.08+(5-quality)*0.02));
+			entry.easeFactor *= 10;
+			entry.easeFactor = Math.round(entry.easeFactor);
+			entry.easeFactor /= 10;
+			if (entry.easeFactor < 1.3) entry.easeFactor = 1.3; 
+			console.log("answer, quality: " + quality + ", new interval: " + entry.interval);
+			this.entries[this.currentQuestionEntryId] = entry;
+			this.saveToLocalStorage();
+			this.nextQuestion();
+			this.updateView();
 		},
 		
 		addEntry: function(e) {
-			wordsLang.app.cleanCreateView();
-			wordsLang.app.activeView = 'editEntry';
-			wordsLang.app.updateView();
+			this.cleanCreateView();
+			this.activeView = 'editEntry';
+			this.updateView();
 			e.preventDefault();
 		},
 		
@@ -113,10 +145,20 @@ wordsLang = {
 		},
 		
 		showAnswer: function(e) {
-			var entry = wordsLang.app.getCurrentEntry()
+			this.subView = 'answerView';
+			var entry = this.getCurrentEntry()
 			document.getElementById('answer').innerHTML = entry.back;
 			document.getElementById('answerDiv').style.display = '';
 			document.getElementById('questionDiv').style.display = 'none';
+			this.updateView();
+		},
+		
+		showQuestion: function() {
+			window.focus();
+			this.subView = 'questionView';
+			document.getElementById('answerDiv').style.display = 'none';
+			document.getElementById('questionDiv').style.display = '';
+			setTimeout(function() { document.getElementById('scratchPad').focus(); })
 		},
 		
 		isPractiseNow: function(entry) {
@@ -125,15 +167,15 @@ wordsLang = {
 			}
 			else {
 				var nextPractiseDate
-				if (entry.interval === 1) {
-					nextPractiseDate = (entry.lastSeen + 1)
-				}
-				else if (entry.interval === 2) {
-					nextPractiseDate = (entry.lastSeen + 2)
-				}
-				else {
-					nextPractiseDate = (entry.lastSeen + Math.floor(entry.interval * entry.easeFactor))
-				}
+				var lastSeenDate = new Date(entry.lastSeen);
+				var daysToAdd;
+				if (entry.interval === 1) daysToAdd = 1;
+				else if (entry.interval === 2) daysToAdd = 2;
+				else daysToAdd = Math.floor(entry.interval * entry.easeFactor);
+				
+				var millisSinceEpoch = lastSeenDate.getTime() + (daysToAdd * 24 * 3600 * 1000);
+				var nextPractiseDate = new Date(millisSinceEpoch);
+				console.log("isPractiseNow, daysToAdd: " + daysToAdd + ", lastSeenDate: " + lastSeenDate + ", nextPractiseDate: " + nextPractiseDate);
 				var now = new Date();
 				return (nextPractiseDate.getFullYear() === now.getFullYear() &&
 						nextPractiseDate.getMonth() === now.getMonth() &&
@@ -147,6 +189,7 @@ wordsLang = {
 				if (this.isPractiseNow(wordsLang.app.entries[i])) {
 					questionFound = true
 					this.currentQuestionEntryId = i
+					this.showQuestion();
 					document.getElementById('question').innerHTML = this.entries[i].front
 				}
 			}
@@ -205,7 +248,7 @@ wordsLang = {
 				bodyStr += "<tr>"
 				bodyStr += "<td>" + wordsLang.app.entries[i].front + "</td>"
 				bodyStr += "<td>" + wordsLang.app.entries[i].back + "</td>"
-				bodyStr += "<td>" + wordsLang.app.getDateStr(wordsLang.app.entries[i].lastSeen) + "</td>"
+				bodyStr += "<td>" + (wordsLang.app.entries[i].lastSeen !== null ? wordsLang.app.getDateStr(wordsLang.app.entries[i].lastSeen) : "-") + "</td>"
 				bodyStr += "<td>" + wordsLang.app.entries[i].interval + "</td>"
 				bodyStr += "<td>" + wordsLang.app.entries[i].easeFactor + "</td>"
 				bodyStr += "<td><a href='#' onclick='javascript:wordsLang.app.editEntry(" 
@@ -219,10 +262,39 @@ wordsLang = {
 			document.getElementById('entryListTableBody').innerHTML = bodyStr;
 		},
 		
+		respondToKeypress: function(event) {
+			if (this.activeView === 'askView' && this.subView === 'answerView') {
+				// pressed one of the buttons 0-5
+				if (event.charCode > 47 && event.charCode < 54) {
+					this.answer(event.charCode - 48);
+				}
+			}
+			else if (this.activeView === 'askView' && this.subView === 'questionView') {
+				// pressed SHIFT-ENTER
+				if (event.keyCode == 13 && event.shiftKey == true) {
+					this.showAnswer();
+					//event.preventDefault();
+				}
+			}
+		},
+		
 		updateView: function() {
 			this.entryCntElement.innerHTML = wordsLang.app.entries.length;
 			if (this.activeView === 'entryList') {
 				wordsLang.app.buildEntryListTableBody();
+			}
+			else if (this.activeView === 'askView') {
+				if(this.subView === 'questionView') {
+					document.getElementById("scratchPad").value = "";
+					document.getElementById("scratchPad").removeAttribute('disabled');
+				} 
+				else {
+					document.getElementById("scratchPad").setAttribute('disabled', 'disabled');
+					document.getElementById("scratchPad").blur();
+				}
+			}
+			else if (this.activeView === 'editEntry') {
+				setTimeout(function() { document.getElementById('frontEdit').focus(); });
 			}
 			for (var i = 0; i < this.views.length; i++) {
 				var element = document.getElementById(this.views[i]);
