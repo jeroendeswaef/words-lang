@@ -4,15 +4,29 @@ document.addEventListener('load', function() { JS3DB.Auth.DOM.onload('allContent
 document.getElementById('logoutAction').addEventListener('click', function() { JS3DB.Auth.DOM.logout(); return false; }, true);
 
 S3Connector = {
+	fileName: "words",
+	
 	save: function(jsonStr) {
+		var that = this;
 		console.log('S3Connector save');
-		JS3DB.set("words", jsonStr,
+		JS3DB.set(this.fileName, jsonStr,
             function(req, obj) {
-                console.log('Successfully saved file ' + "words");
+                console.log('successfully saved file ' + that.fileName);
             },
             function(req, obj) {
-                console.error('ERROR saving file ' + filename
+                console.error('ERROR saving file ' + that.fileName
                     + '. Error message ' + obj.Error.Message);
+        });
+	},
+	
+	load: function(setterFunc) {
+		var that = this;
+		var returnObj = null;
+		console.log('S3Connector load');
+		JS3DB.get(this.fileName, 
+        	function(obj) {
+            	console.log ('successfully retrieved file ' + that.fileName);
+				setterFunc(obj);
         });
 	}
 }

@@ -41,11 +41,12 @@ wordsLang = {
 				document.getElementById('practiseAction').addEventListener('click', wordsLang.app.showPractiseView, true);
 				document.getElementById('showAnswerAction').addEventListener('click', this.showAnswer.bindThis(this), true);
 				document.getElementById('saveToWebAction').addEventListener('click', this.saveToWeb.bindThis(this), true);
+				document.getElementById('loadFromWebAction').addEventListener('click', this.loadFromWeb.bindThis(this), true);
 				window.addEventListener('keypress', this.respondToKeypress.bindThis(this), true);
 				
 				answerActionElements = document.getElementsByName('answeredAction')
 				for(var i = 0; i < answerActionElements.length; i++) {
-					answerActionElements[i].addEventListener('click', this.answer.bindThis(this), true);
+					answerActionElements[i].addEventListener('click', this.clickAnswer.bindThis(this), true);
 				}
 				
 				this.fillFromLocalStorage();
@@ -94,17 +95,33 @@ wordsLang = {
 			}
 		},
 		
-		saveToWeb: function() {
+		saveToWeb: function(event) {
 			var jsonStr = JSON.stringify(this.entries);
 			console.log('save to web', jsonStr);
 			if(this.externalStorage != null) {
 				this.externalStorage.save(jsonStr);
 			}
+			event.preventDefault();
+		},
+		
+		loadFromWeb: function(event) {
+			console.log('load from web');
+			if(this.externalStorage != null) {
+				this.externalStorage.load(this.loadedFromWeb);
+			}
+			event.preventDefault();
+		},
+		
+		loadedFromWeb: function(jsonStr) {
+			console.log('loadedFromWeb');
+			wordsLang.app.wordsLib.set(jsonStr);
+			wordsLang.app.saveToLocalStorage();
+			wordsLang.app.updateView();
 		},
 		
 		// storage must be an object with the following methods:
 		// save (json)
-		// load (json)
+		// load
 		registerExternalStorage: function(storage) {
 			this.externalStorage = storage;
 		},
@@ -124,7 +141,7 @@ wordsLang = {
 			entry.easeFactor = Math.round(entry.easeFactor);
 			entry.easeFactor /= 10;
 			if (entry.easeFactor < 1.3) entry.easeFactor = 1.3; 
-			console.log("answer, quality: " + quality + ", new interval: " + entry.interval);
+			console.log("answer, quality: " + quality + ", new interval: " + entry.interval, ", EF: " + entry.easeFactor);
 			this.entries[this.currentQuestionEntryId] = entry;
 			this.saveToLocalStorage();
 			this.nextQuestion();
@@ -291,7 +308,6 @@ wordsLang = {
 				// pressed SHIFT-ENTER
 				if (event.keyCode == 13 && event.shiftKey == true) {
 					this.showAnswer();
-					//event.preventDefault();
 				}
 			}
 		},
@@ -322,6 +338,14 @@ wordsLang = {
 				else {
 					element.style.display = 'none'
 				}
+			}
+		},
+		
+		wordsLib: {
+			set: function(jsonStr) {
+				var obj = JSON.parse(jsonStr);
+				console.log('setting... ' + jsonStr);
+				wordsLang.app.entries = obj;
 			}
 		}
 	},
