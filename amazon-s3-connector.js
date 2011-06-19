@@ -6,12 +6,13 @@ document.getElementById('logoutAction').addEventListener('click', function() { J
 S3Connector = {
 	fileName: "words",
 	
-	save: function(jsonStr) {
+	save: function(jsonStr, doneFunc) {
 		var that = this;
 		console.log('S3Connector save');
 		JS3DB.set(this.fileName, jsonStr,
             function(req, obj) {
                 console.log('successfully saved file ' + that.fileName);
+				if (doneFunc) doneFunc();
             },
             function(req, obj) {
                 console.error('ERROR saving file ' + that.fileName

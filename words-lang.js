@@ -50,6 +50,7 @@ wordsLang = {
 				}
 				
 				this.fillFromLocalStorage();
+				this.loadFromWeb();
 				this.nextQuestion();
 				this.updateView();
 			}
@@ -59,36 +60,51 @@ wordsLang = {
 		},
 		
 		fillFromLocalStorage: function() {
+			console.log('fillFromLocalStorage, timeStamp: ' + localStorage.getItem("wordsLangTimeStamp"));
 			wordsLang.app.entries = []
+			wordsLang.app.localTimeStamp = parseInt(localStorage.getItem("wordsLangTimeStamp"));
 			for(var i = 0; i < localStorage.length; i++) {
 				var str = localStorage.getItem(localStorage.key(i));
-				var parts = str.split("|-|");
-				var lastSeen = null
-				if (parts[2] && parts[2] != "") {
-					lastSeen = new Date(	parseInt(parts[2].split('-')[0]), 
-											parseInt(parts[2].split('-')[1]), 
-											parseInt(parts[2].split('-')[2]), 0, 0, 0)
+				if (localStorage.key(i).indexOf('wordsLangEntry') == 0) {
+					var parts = str.split("|-|");
+					var lastSeen = null
+					if (parts[2] && parts[2] != "") {
+						lastSeen = this.getLastSeen(parts[2]);
+					}
+					var entry = {	
+						front: parts[0],
+						back: parts[1],
+						lastSeen: lastSeen,
+						interval: parts[3],
+						easeFactor: parts[4]
+					}
+					wordsLang.app.entries.push(entry);
 				}
-				var entry = {	
-					front: parts[0],
-					back: parts[1],
-					lastSeen: lastSeen,
-					interval: parts[3],
-					easeFactor: parts[4]
-				}
-				wordsLang.app.entries.push(entry);
 			}
 		},
 		
+		getLastSeenStr: function(entry) {
+			var lastSeenStr = "";
+			if(entry.lastSeen) {
+				lastSeenStr = entry.lastSeen.getFullYear() + "-" + entry.lastSeen.getMonth()
+					+ "-" + entry.lastSeen.getDate();
+			}
+			return lastSeenStr;
+		},
+		
+		getLastSeen: function(lastSeenStr) {
+			return new Date(	parseInt(lastSeenStr.split('-')[0]), 
+									parseInt(lastSeenStr.split('-')[1]), 
+									parseInt(lastSeenStr.split('-')[2]), 0, 0, 0);
+		},
+		
 		saveToLocalStorage: function() {
+			console.log('saveToLocalStorage, timeStamp: ' + wordsLang.app.localTimeStamp);
 			localStorage.clear();
+			localStorage.setItem("wordsLangTimeStamp", wordsLang.app.localTimeStamp);
 			for(var i = 0; i < wordsLang.app.entries.length; i++) {
 				var entry = wordsLang.app.entries[i];
-				var lastSeenStr = "";
-				if(entry.lastSeen) {
-					lastSeenStr = entry.lastSeen.getFullYear() + "-" + entry.lastSeen.getMonth()
-						+ "-" + entry.lastSeen.getDate();
-				}
+				var lastSeenStr = this.getLastSeenStr(entry);
 				var entryStr = entry.front + "|-|" + entry.back + "|-|" 
 					+ lastSeenStr + "|-|" + entry.interval + "|-|" + entry.easeFactor
 				localStorage.setItem("wordsLangEntry-" + i, entryStr);
@@ -96,10 +112,15 @@ wordsLang = {
 		},
 		
 		saveToWeb: function(event) {
-			var jsonStr = JSON.stringify(this.entries);
+			var cards = {
+				version: 1,
+				savedTimeStamp: wordsLang.app.localTimeStamp,
+				entries: this.entries
+			}
+			var jsonStr = JSON.stringify(cards);
 			console.log('save to web', jsonStr);
 			if(this.externalStorage != null) {
-				this.externalStorage.save(jsonStr);
+				this.externalStorage.save(jsonStr, this.updateView.bindThis(this));
 			}
 			event.preventDefault();
 		},
@@ -109,14 +130,34 @@ wordsLang = {
 			if(this.externalStorage != null) {
 				this.externalStorage.load(this.loadedFromWeb);
 			}
-			event.preventDefault();
+			if (event) event.preventDefault();
 		},
 		
 		loadedFromWeb: function(jsonStr) {
-			console.log('loadedFromWeb');
-			wordsLang.app.wordsLib.set(jsonStr);
-			wordsLang.app.saveToLocalStorage();
+			var obj = JSON.parse(jsonStr);
+			console.log('loadedFromWeb, localtimestamp: ' + wordsLang.app.localTimeStamp + ', servertime: ' + obj.savedTimeStamp);
+			if (wordsLang.app.localTimeStamp < obj.savedTimeStamp) {
+				wordsLang.app.fillFromWeb(obj.entries);
+				wordsLang.app.localTimeStamp = obj.savedTimeStamp;
+				wordsLang.app.saveToLocalStorage();
+			} 
+			wordsLang.app.webTimeStamp = obj.savedTimeStamp;
 			wordsLang.app.updateView();
+		},
+		
+		fillFromWeb: function(rawObj) {
+			var obj = [];
+			for(var i = 0; i < rawObj.length; i++) {
+				var entry = {	
+					front: rawObj[i].front,
+					back: rawObj[i].back,
+					lastSeen: wordsLang.app.getLastSeen(rawObj[i].lastSeen),
+					interval: rawObj[i].interval,
+					easeFactor: rawObj[i].easeFactor
+				}
+				obj.push(entry);
+			}
+			wordsLang.app.wordsLib.set(obj);
 		},
 		
 		// storage must be an object with the following methods:
@@ -151,6 +192,15 @@ wordsLang = {
 		addEntry: function(e) {
 			this.cleanCreateView();
 			this.activeView = 'editEntry';
+			/*var div = MathJax.HTML.Element(
+			  "div",
+			  {id: "MathDiv", style:{border:"1px solid", padding:"5px"}},
+			  ["Here is math: $x+1$",["br"],"and a display $$x+1\\over x-1$$"]
+			);*/
+			//document.getElementById('editEntry').appendChild(div);
+			//var math = document.getElementById("MathExample");
+			//MathJax.Hub.Queue(["Typeset",MathJax.Hub,div]);
+			
 			this.updateView();
 			e.preventDefault();
 		},
@@ -339,12 +389,30 @@ wordsLang = {
 					element.style.display = 'none'
 				}
 			}
+			console.log('updateView:::> localTimeStamp:', this.localTimeStamp, this.localTimeStamp <= this.webTimeStamp ? (this.localTimeStamp === this.webTimeStamp ? '=' : '<') : '>', 'webTimeStamp:', this.webTimeStamp);
+			if (this.localTimeStamp === this.webTimeStamp) {
+				// saved
+				document.getElementById('saveToWebAction').style.display = 'none';
+				document.getElementById('loadFromWebAction').style.display = 'none';
+				document.getElementById('savedMessage').style.display = '';
+			}
+			else if (this.localTimeStamp > this.webTimeStamp) {
+				// saveable
+				document.getElementById('saveToWebAction').style.display = '';
+				document.getElementById('loadFromWebAction').style.display = 'none';
+				document.getElementById('savedMessage').style.display = 'none';
+			}
+			else {
+				// loadable
+				document.getElementById('saveToWebAction').style.display = 'none';
+				document.getElementById('loadFromWebAction').style.display = '';
+				document.getElementById('savedMessage').style.display = 'none';	
+			} 
 		},
 		
 		wordsLib: {
-			set: function(jsonStr) {
-				var obj = JSON.parse(jsonStr);
-				console.log('setting... ' + jsonStr);
+			set: function(obj) {
+				console.log('setting... ' + obj);
 				wordsLang.app.entries = obj;
 			}
 		}
@@ -361,4 +429,4 @@ wordsLang = {
 	}
 }
 
-wordsLang.app.init();
+window.addEventListener('load', wordsLang.app.init.bindThis(wordsLang.app), true);
