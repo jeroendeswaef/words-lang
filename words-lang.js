@@ -24,6 +24,7 @@ wordsLang = {
 		
 		init: function() {
 			if(wordsLang.utilities.supportsLocalStorage()) {
+				this.localTimeStamp = 0;
 				this.entryCntElement = document.getElementById('entryCnt');
 				this.frontEditElement = document.getElementById('frontEdit');
 				this.backEditElement = document.getElementById('backEdit');
@@ -36,7 +37,7 @@ wordsLang = {
 				this.currentQuestionEntryId = null;
 				
 				document.getElementById('createNewAction').addEventListener('click', this.addEntry.bindThis(this), true);
-				this.saveEntryActionElement.addEventListener('click', wordsLang.app.saveEntry, true);
+				this.saveEntryActionElement.addEventListener('click', wordsLang.app.saveEntry.bindThis(this), true);
 				document.getElementById('showEntryListAction').addEventListener('click', wordsLang.app.showEntryList, true);
 				document.getElementById('practiseAction').addEventListener('click', wordsLang.app.showPractiseView, true);
 				document.getElementById('showAnswerAction').addEventListener('click', this.showAnswer.bindThis(this), true);
@@ -62,7 +63,9 @@ wordsLang = {
 		fillFromLocalStorage: function() {
 			console.log('fillFromLocalStorage, timeStamp: ' + localStorage.getItem("wordsLangTimeStamp"));
 			wordsLang.app.entries = []
-			wordsLang.app.localTimeStamp = parseInt(localStorage.getItem("wordsLangTimeStamp"));
+			if (localStorage.getItem("wordsLangTimeStamp") !== null) {
+				wordsLang.app.localTimeStamp = parseInt(localStorage.getItem("wordsLangTimeStamp"));
+			}
 			for(var i = 0; i < localStorage.length; i++) {
 				var str = localStorage.getItem(localStorage.key(i));
 				if (localStorage.key(i).indexOf('wordsLangEntry') == 0) {
@@ -93,6 +96,7 @@ wordsLang = {
 		},
 		
 		getLastSeen: function(lastSeenStr) {
+			if (lastSeenStr === null) return null;
 			return new Date(	parseInt(lastSeenStr.split('-')[0]), 
 									parseInt(lastSeenStr.split('-')[1]), 
 									parseInt(lastSeenStr.split('-')[2]), 0, 0, 0);
@@ -120,29 +124,34 @@ wordsLang = {
 			var jsonStr = JSON.stringify(cards);
 			console.log('save to web', jsonStr);
 			if(this.externalStorage != null) {
-				this.externalStorage.save(jsonStr, this.updateView.bindThis(this));
+				this.externalStorage.save(jsonStr, this.savedToWeb.bindThis(this));
 			}
 			event.preventDefault();
+		},
+		
+		savedToWeb: function(event) {
+			this.webTimeStamp = this.localTimeStamp;
+			this.updateView();
 		},
 		
 		loadFromWeb: function(event) {
 			console.log('load from web');
 			if(this.externalStorage != null) {
-				this.externalStorage.load(this.loadedFromWeb);
+				this.externalStorage.load(this.loadedFromWeb.bindThis(this));
 			}
 			if (event) event.preventDefault();
 		},
 		
 		loadedFromWeb: function(jsonStr) {
 			var obj = JSON.parse(jsonStr);
-			console.log('loadedFromWeb, localtimestamp: ' + wordsLang.app.localTimeStamp + ', servertime: ' + obj.savedTimeStamp);
-			if (wordsLang.app.localTimeStamp < obj.savedTimeStamp) {
-				wordsLang.app.fillFromWeb(obj.entries);
-				wordsLang.app.localTimeStamp = obj.savedTimeStamp;
-				wordsLang.app.saveToLocalStorage();
+			console.log('loadedFromWeb, localtimestamp: ' + this.localTimeStamp + ', servertime: ' + obj.savedTimeStamp);
+			if (this.localTimeStamp < obj.savedTimeStamp) {
+				this.fillFromWeb(obj.entries);
+				this.localTimeStamp = obj.savedTimeStamp;
+				this.saveToLocalStorage();
 			} 
-			wordsLang.app.webTimeStamp = obj.savedTimeStamp;
-			wordsLang.app.updateView();
+			this.webTimeStamp = obj.savedTimeStamp;
+			this.updateView();
 		},
 		
 		fillFromWeb: function(rawObj) {
@@ -157,7 +166,7 @@ wordsLang = {
 				}
 				obj.push(entry);
 			}
-			wordsLang.app.wordsLib.set(obj);
+			this.entries = obj;
 		},
 		
 		// storage must be an object with the following methods:
@@ -183,8 +192,9 @@ wordsLang = {
 			entry.easeFactor /= 10;
 			if (entry.easeFactor < 1.3) entry.easeFactor = 1.3; 
 			console.log("answer, quality: " + quality + ", new interval: " + entry.interval, ", EF: " + entry.easeFactor);
-			this.entries[this.currentQuestionEntryId] = entry;
-			this.saveToLocalStorage();
+			this.modifyEntries( function() {
+				this.entries[this.currentQuestionEntryId] = entry;
+			}.bindThis(this));
 			this.nextQuestion();
 			this.updateView();
 		},
@@ -206,7 +216,7 @@ wordsLang = {
 		},
 		
 		saveEntry: function(e) {
-			var entryId = parseInt(this.getAttribute('entryId'));
+			var entryId = parseInt(e.target.getAttribute('entryId'));
 			var index = (entryId !== -1 ? entryId : wordsLang.app.entries.length);
 			var entry = {
 				front: wordsLang.app.frontEditElement.value,
@@ -215,13 +225,14 @@ wordsLang = {
 				interval: 0,
 				easeFactor: 2.5
 			};
-			wordsLang.app.entries[index] = entry;
-			wordsLang.app.saveToLocalStorage();
+			this.modifyEntries( function() {
+				this.entries[index] = entry;
+			}.bindThis(this));
 			if (entryId !== -1) {
-				wordsLang.app.activeView = 'entryList';
+				this.activeView = 'entryList';
 			}
-			wordsLang.app.cleanCreateView();
-			wordsLang.app.updateView();
+			this.cleanCreateView();
+			this.updateView();
 			e.preventDefault();
 		},
 		
@@ -311,11 +322,19 @@ wordsLang = {
 			wordsLang.app.updateView();
 		},
 		
+		modifyEntries: function(modifyingFunc) {
+			modifyingFunc();
+			this.saveToLocalStorage();
+			this.localTimeStamp = new Date().getTime();
+			console.log("modifying entries, new date:", this.localTimeStamp);
+		},
+		
 		deleteEntry: function(id) {
-			wordsLang.app.entries.splice(id, 1);
-			wordsLang.app.saveToLocalStorage();
-			wordsLang.app.activeView = 'entryList';
-			wordsLang.app.updateView();
+			this.modifyEntries( function() {
+				this.entries.splice(id, 1);
+			}.bindThis(this));
+			this.activeView = 'entryList';
+			this.updateView();
 		},
 		
 		getDateStr: function(date) {
@@ -409,13 +428,6 @@ wordsLang = {
 				document.getElementById('savedMessage').style.display = 'none';	
 			} 
 		},
-		
-		wordsLib: {
-			set: function(obj) {
-				console.log('setting... ' + obj);
-				wordsLang.app.entries = obj;
-			}
-		}
 	},
 	
 	utilities: {
