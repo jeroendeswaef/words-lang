@@ -384,8 +384,10 @@ JS3DB.Auth.DOM = {
      *     page.  This div will be hidden if the login form needs to be 
      *     displayed.
      */
-    onload : function(divid) {
+    onload : function(divid, afterSuccessFunc) {
         
+		this.afterSuccessFunc = afterSuccessFunc;
+		
         // store the source div
         this.sourcedivid = divid;
         
@@ -420,6 +422,7 @@ JS3DB.Auth.DOM = {
                     .style.display = '';
             document.getElementById(JS3DB.Auth.DOM.logindivid)
                     .style.display = 'none';
+			this.afterSuccessFunc();
         } else {
             alert('Please enter valid S3 credentials.');
         }

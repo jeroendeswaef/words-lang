@@ -1,15 +1,27 @@
-<!DOCTYPE html>
+<!DOCTYPE HTML>
 
-<html>
+<html manifest="/cache.manifest">
 <head>
+	<title>flash cards</title>
 	<style type="text/css">
-		#editEntry, #askView, #nothingToDo {
+		#editEntry, #askView, #nothingToDo, #proceedAnyway {
 			text-align: center;
 		}
-		#entryList table{
+		#searchBox {
+			margin-bottom: 10px;
+			width: 60%;
+		}
+		#entryList {
 			margin: auto;
+			width: 90%;
+		}
+		#entryList table {
+			width: 100%;
 			text-align: left;
-			border: 1px solid;
+			border: 1px solid darkGrey;
+		}
+		#entryList table th {
+			border-bottom: 1px dotted darkGrey;
 		}
 		#header {
 			margin-bottom: 20px;
@@ -29,34 +41,48 @@
 			float: right;
 			margin-left: 5px;
 		}
+		#saveToWebAction, #loadFromWebAction {
+			display: none;
+		}
 	</style>
-	<!--<script type="text/javascript"
-	  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default">
-	</script>-->
-
 </head>
 <body>
-	<div id="allContent" style="display: none">
+	 <form>
+	    <input type="text" id="context"  onClick="paste();">  
+	  </form>
+
+	<script type="text/javascript"> 
+
+	function paste() {  
+
+	var sRetrieveData = clipboardData.getData("Text");
+	document.getElementById('context').value = sRetrieveData;        
+
+	}
+	</script>
+	
+	<div id="allContent">
 		<div id="header">
-			<a id="showEntryListAction" href="#"><span id="entryCnt">xx</span> entries</a>
+			<a id="showEntryListAction" href="#"><span id="entryCnt">xx</span> <span id="entryName">entries</span></a>
 			<a id="createNewAction" href="#">create new</a>
 			<a id="practiseAction" href="#">practise</a>
 			
-			<a id="logoutAction" class="rightMenu" href="#">log out</a>
 			<a id="saveToWebAction" class="rightMenu" href="#">save to web</a>
 			<a id="loadFromWebAction" class="rightMenu" href="#">load from web</a>
-			<div id="savedMessage" class="rightMenu">saved</div>
+			<div id="statusMessage" class="rightMenu">offline</div>
 		</div>
 		<div id="editEntry" style="display: none">
 			Front:<br />
-			<textarea id="frontEdit" rows="3" cols="40"></textarea><br /><br />
+			<textarea id="frontEdit" rows="3" cols="40"></textarea>
+			<div id="frontResultDummy"></div><br /><br />
 			Back:<br />
-			<textarea id="backEdit" rows="3" cols="40"></textarea><br /><br />
-			<!--<a id="saveEntryAction" href="#">save</a>-->
+			<textarea id="backEdit" rows="3" cols="40"></textarea>
+			<div id="backResultDummy"></div><br /><br />
 			<input type="button" id="saveEntryAction" value="save" />
 		</div>
 		<div id="entryList" style="display: none">
-			<table>
+			<input type="text" id="searchBox"></input>
+			<table id="entryListTable" cellspacing="0">
 				<thead>
 					<tr>
 						<th id="frontColumn">Front</th>
@@ -64,6 +90,8 @@
 						<th class="infoColumn">Last seen</th>
 						<th class="infoColumn">Interval</th>
 						<th class="infoColumn">Ease factor</th>
+						<th class="infoColumn">Practise</th>
+						<th></th>
 						<th></th>
 						<th></th>
 					</tr>
@@ -72,35 +100,34 @@
 				</tbody>
 			</table>
 		</div>
-		<div id="askView">
+		<div id="askView" style="display: none">
 			<div id="question"></div>
+			<div id="questionResultDummy"></div>
 			<br />
 			<textarea id="scratchPad" rows="3" cols="40"></textarea><br /><br />
 			<div id="questionDiv">
 				<br />
 				<input type="button" id="showAnswerAction" value="show answer" />
 			</div>
-			<div id="answerDiv" style="display:none">
-				<b>Answer:</b><div id="answer"></div><br />
+			<div id="answerDiv" style="display: none">
+				<b>Answer:</b><div id="answer"></div><div id="answerResultDummy"></div><br />
 				<div id="answerButtons">
-					<input type="button" name="answeredAction" value="0" />
+					<div style="display: inline-block; text-align: right; vertical-align: top">
+					<input type="button" style="color: red" name="answeredAction" value="0" /><br />
+					complete blackout
+					</div>
 					<input type="button" name="answeredAction" value="1" />
 					<input type="button" name="answeredAction" value="2" />
 					<input type="button" name="answeredAction" value="3" />
 					<input type="button" name="answeredAction" value="4" />
-					<input type="button" name="answeredAction" value="5" />
+					<div style="display: inline-block; text-align: left; vertical-align: top">
+						<input type="button" style="color: green" name="answeredAction" value="5" /><br />
+						perfect response
+					</div>
 				</div>
-				<ul id="qualityHelp">
-					<li>0 - complete blackout</li>
-					<li>1 - incorrect response; the correct one remembered</li>
-					<li>2 - incorrect response; where the correct one seemed easy to recall</li>
-					<li>3 - correct response recalled with serious difficulty</li>
-					<li>4 - correct response after a hesitation</li>
-					<li>5 - perfect response</li>
-				</ul>
 			</div>
 		</div>
-		<div id="nothingToDo">Nothing to be done</div>
+		<div id="nothingToDo">Nothing to do<br/><div id="proceedAnyway" style="display: none"><a id="proceedAnywayAction" href="#">proceed anyway</a></div></div><br />
 	</div><!-- /allContent -->
 </body>
 <script type="text/javascript" src="words-lang.js"></script>
@@ -110,4 +137,5 @@
 <script type="text/javascript" src="S3Ajax.js"></script>
 <script type="text/javascript" src="js3db.js"></script>
 <script type="text/javascript" src="amazon-s3-connector.js"></script>
+<script type="text/javascript" src="MathJax.js?config=default"></script>
 </html>

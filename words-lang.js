@@ -35,6 +35,8 @@ wordsLang = {
 				this.views = ['askView', 'entryList', 'editEntry', 'nothingToDo'];
 				this.activeView = 'askView';
 				this.currentQuestionEntryId = null;
+				this.proceedAnyway = false;
+				this.proceedAnywayCounter = 0;
 				
 				document.getElementById('createNewAction').addEventListener('click', this.addEntry.bindThis(this), true);
 				this.saveEntryActionElement.addEventListener('click', wordsLang.app.saveEntry.bindThis(this), true);
@@ -44,7 +46,10 @@ wordsLang = {
 				document.getElementById('saveToWebAction').addEventListener('click', this.saveToWeb.bindThis(this), true);
 				document.getElementById('loadFromWebAction').addEventListener('click', this.loadFromWeb.bindThis(this), true);
 				window.addEventListener('keypress', this.respondToKeypress.bindThis(this), true);
-				
+				document.getElementById('frontEdit').addEventListener('keypress', function() { setTimeout(function() { wordsLang.app.updateView() }, 0) }, true);
+				document.getElementById('backEdit').addEventListener('keypress', function() { setTimeout(function() { wordsLang.app.updateView() }, 0) }, true);
+				document.getElementById('proceedAnywayAction').addEventListener('click', this.setProceedAnyway.bindThis(this), true);
+				document.getElementById('searchBox').addEventListener('keypress', function() { setTimeout(function() { wordsLang.app.updateView() }, 0) }, true);
 				answerActionElements = document.getElementsByName('answeredAction')
 				for(var i = 0; i < answerActionElements.length; i++) {
 					answerActionElements[i].addEventListener('click', this.clickAnswer.bindThis(this), true);
@@ -66,6 +71,8 @@ wordsLang = {
 			if (localStorage.getItem("wordsLangTimeStamp") !== null) {
 				wordsLang.app.localTimeStamp = parseInt(localStorage.getItem("wordsLangTimeStamp"));
 			}
+			// else this.localTimeStamp = 0
+			
 			for(var i = 0; i < localStorage.length; i++) {
 				var str = localStorage.getItem(localStorage.key(i));
 				if (localStorage.key(i).indexOf('wordsLangEntry') == 0) {
@@ -78,27 +85,32 @@ wordsLang = {
 						front: parts[0],
 						back: parts[1],
 						lastSeen: lastSeen,
-						interval: parts[3],
-						easeFactor: parts[4]
+						interval: parseInt(parts[3]),
+						easeFactor: parseFloat(parts[4])
 					}
 					wordsLang.app.entries.push(entry);
 				}
 			}
 		},
 		
-		getLastSeenStr: function(entry) {
-			var lastSeenStr = "";
-			if(entry.lastSeen) {
-				lastSeenStr = entry.lastSeen.getFullYear() + "-" + entry.lastSeen.getMonth()
-					+ "-" + entry.lastSeen.getDate();
+		getDateStr: function(date) {
+			console.log('getDateStr', date, date && date.getDate());
+			var str = "";
+			if (date) {
+				str = date.getFullYear() + "-" + (parseInt(date.getMonth()) + 1)
+					+ "-" + (parseInt(date.getDate()));
 			}
-			return lastSeenStr;
+			return str;
+		},
+		
+		getLastSeenStr: function(entry) {
+			return this.getDateStr(entry.lastSeen);
 		},
 		
 		getLastSeen: function(lastSeenStr) {
 			if (lastSeenStr === null) return null;
 			return new Date(	parseInt(lastSeenStr.split('-')[0]), 
-									parseInt(lastSeenStr.split('-')[1]), 
+									parseInt(lastSeenStr.split('-')[1]) - 1, 
 									parseInt(lastSeenStr.split('-')[2]), 0, 0, 0);
 		},
 		
@@ -202,20 +214,12 @@ wordsLang = {
 		addEntry: function(e) {
 			this.cleanCreateView();
 			this.activeView = 'editEntry';
-			/*var div = MathJax.HTML.Element(
-			  "div",
-			  {id: "MathDiv", style:{border:"1px solid", padding:"5px"}},
-			  ["Here is math: $x+1$",["br"],"and a display $$x+1\\over x-1$$"]
-			);*/
-			//document.getElementById('editEntry').appendChild(div);
-			//var math = document.getElementById("MathExample");
-			//MathJax.Hub.Queue(["Typeset",MathJax.Hub,div]);
-			
 			this.updateView();
 			e.preventDefault();
 		},
 		
 		saveEntry: function(e) {
+			console.log('saveEntry');
 			var entryId = parseInt(e.target.getAttribute('entryId'));
 			var index = (entryId !== -1 ? entryId : wordsLang.app.entries.length);
 			var entry = {
@@ -246,6 +250,14 @@ wordsLang = {
 			document.getElementById('answer').innerHTML = entry.back;
 			document.getElementById('answerDiv').style.display = '';
 			document.getElementById('questionDiv').style.display = 'none';
+			if (this.isFormula(document.getElementById('answer').innerHTML)) {
+				document.getElementById('answer').style.display = 'none';
+				this.updateFormula('answer', 'innerHTML', 'answerResult', 'answerDiv', 'answerResultDummy');
+			}
+			else {
+				document.getElementById('answerResult') && (document.getElementById('answerResult').style.display = 'none');
+				document.getElementById('answer').style.display = '';
+			}
 			this.updateView();
 		},
 		
@@ -254,42 +266,73 @@ wordsLang = {
 			this.subView = 'questionView';
 			document.getElementById('answerDiv').style.display = 'none';
 			document.getElementById('questionDiv').style.display = '';
+			if (this.isFormula(document.getElementById('question').innerHTML)) {
+				document.getElementById('question').style.display = 'none';
+				this.updateFormula('question', 'innerHTML', 'questionResult', 'askView', 'questionResultDummy');
+			}
+			else {
+				document.getElementById('questionResult') && (document.getElementById('questionResult').style.display = 'none');
+				document.getElementById('question').style.display = '';
+			}
 			setTimeout(function() { document.getElementById('scratchPad').focus(); })
 		},
 		
-		isPractiseNow: function(entry) {
+		getNextPractiseDate: function(entry) {
+			var nextPractiseDate
 			if (entry.lastSeen === null || entry.lastSeen === undefined) {
-				return true;
+				nextPractiseDate = new Date();
 			}
 			else {
-				var nextPractiseDate
 				var lastSeenDate = new Date(entry.lastSeen);
 				var daysToAdd;
 				if (entry.interval === 1) daysToAdd = 1;
 				else if (entry.interval === 2) daysToAdd = 2;
 				else daysToAdd = Math.floor(entry.interval * entry.easeFactor);
-				
+			console.log('interval', entry.interval, entry.interval === 1, 'daysToAdd', daysToAdd);
 				var millisSinceEpoch = lastSeenDate.getTime() + (daysToAdd * 24 * 3600 * 1000);
 				var nextPractiseDate = new Date(millisSinceEpoch);
-				console.log("isPractiseNow, daysToAdd: " + daysToAdd + ", lastSeenDate: " + lastSeenDate + ", nextPractiseDate: " + nextPractiseDate);
-				var now = new Date();
-				return (nextPractiseDate.getFullYear() === now.getFullYear() &&
-						nextPractiseDate.getMonth() === now.getMonth() &&
-						nextPractiseDate.getDate() === now.getDate())
 			}
+			console.log('last seen', entry.lastSeen, 'next practise date', nextPractiseDate);
+			return nextPractiseDate;
+		},
+		
+		isPractiseNow: function(entry) {
+			var nextPractiseDate = this.getNextPractiseDate(entry);
+			var now = new Date();
+			return (nextPractiseDate.getFullYear() === now.getFullYear() &&
+					nextPractiseDate.getMonth() === now.getMonth() &&
+					nextPractiseDate.getDate() === now.getDate())
+		},
+		
+		setProceedAnyway: function() {
+			this.proceedAnyway = true;
+			this.showPractiseView();
 		},
 		
 		nextQuestion: function() {
-			var questionFound = false
-			for(var i = 0; i < this.entries.length; i++) {
-				if (this.isPractiseNow(wordsLang.app.entries[i])) {
-					questionFound = true
-					this.currentQuestionEntryId = i
-					this.showQuestion();
-					document.getElementById('question').innerHTML = this.entries[i].front
+			var questionFound = false;
+			var newEntryId = undefined;
+			if (this.proceedAnyway && this.entries.length > 0) {
+				questionFound = true;
+				newEntryId = (this.proceedAnywayCounter % this.entries.length);
+				this.proceedAnywayCounter++;
+			}
+			else {
+				for(i = 0; i < this.entries.length; i++) {
+					if (this.isPractiseNow(wordsLang.app.entries[i])) {
+						questionFound = true;
+						newEntryId = i;
+					}
 				}
 			}
-			if (! questionFound) this.activeView = 'nothingToDo';
+			if (questionFound) {
+				this.currentQuestionEntryId = newEntryId;
+				document.getElementById('question').innerHTML = this.entries[newEntryId].front;
+				this.showQuestion();
+			}
+			else {
+				this.activeView = 'nothingToDo';
+			}
 		},
 		
 		showPractiseView: function(e) {
@@ -298,7 +341,7 @@ wordsLang = {
 			wordsLang.app.activeView = 'askView';
 			wordsLang.app.nextQuestion();
 			wordsLang.app.updateView();
-			e.preventDefault();
+			e && (e.preventDefault());
 		},
 		
 		cleanCreateView: function() {
@@ -320,12 +363,13 @@ wordsLang = {
 			wordsLang.app.activeView = 'editEntry';
 			this.saveEntryActionElement.setAttribute('entryId', id);
 			wordsLang.app.updateView();
+			setTimeout(function() { document.getElementById('frontEdit').focus(); });
 		},
 		
 		modifyEntries: function(modifyingFunc) {
 			modifyingFunc();
-			this.saveToLocalStorage();
 			this.localTimeStamp = new Date().getTime();
+			this.saveToLocalStorage();
 			console.log("modifying entries, new date:", this.localTimeStamp);
 		},
 		
@@ -337,31 +381,32 @@ wordsLang = {
 			this.updateView();
 		},
 		
-		getDateStr: function(date) {
-			if (date instanceof Date) {
-				return date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate()
-			}
-			else {
-				return date
-			}
+		isSearch: function() {
+			return !(document.getElementById('searchBox').value === "");
 		},
 		
 		buildEntryListTableBody: function() {
 			var bodyStr = "" 
 			for (var i = 0; i < wordsLang.app.entries.length; i++) {
-				bodyStr += "<tr>"
-				bodyStr += "<td>" + wordsLang.app.entries[i].front + "</td>"
-				bodyStr += "<td>" + wordsLang.app.entries[i].back + "</td>"
-				bodyStr += "<td>" + (wordsLang.app.entries[i].lastSeen !== null ? wordsLang.app.getDateStr(wordsLang.app.entries[i].lastSeen) : "-") + "</td>"
-				bodyStr += "<td>" + wordsLang.app.entries[i].interval + "</td>"
-				bodyStr += "<td>" + wordsLang.app.entries[i].easeFactor + "</td>"
-				bodyStr += "<td><a href='#' onclick='javascript:wordsLang.app.editEntry(" 
-						+ i 
-						+ "); return false;'>edit</a></td>"
-				bodyStr += "<td><a href='#' onclick='javascript:wordsLang.app.deleteEntry(" 
-						+ i 
-						+ "); return false;'>delete</a></td>"
-				bodyStr += "</tr>"
+				var currentEntry = this.entries[i];
+				var searchValue = document.getElementById('searchBox').value;
+				if (!this.isSearch() || (currentEntry.front.indexOf(searchValue) != -1) || 
+					(currentEntry.back.indexOf(searchValue) != -1)) {
+					bodyStr += "<tr>"
+					bodyStr += "<td>" + wordsLang.app.entries[i].front + "</td>"
+					bodyStr += "<td>" + wordsLang.app.entries[i].back + "</td>"
+					bodyStr += "<td>" + (wordsLang.app.entries[i].lastSeen !== null ? wordsLang.app.getLastSeenStr(wordsLang.app.entries[i]) : "-") + "</td>"
+					bodyStr += "<td>" + wordsLang.app.entries[i].interval + "</td>"
+					bodyStr += "<td>" + wordsLang.app.entries[i].easeFactor + "</td>"
+					bodyStr += "<td>" + this.getDateStr(this.getNextPractiseDate(this.entries[i])) + "</td>"
+					bodyStr += "<td><a href='#' onclick='javascript:wordsLang.app.editEntry(" 
+							+ i 
+							+ "); return false;'>edit</a></td>"
+					bodyStr += "<td><a href='#' onclick='javascript:wordsLang.app.deleteEntry(" 
+							+ i 
+							+ "); return false;'>delete</a></td>"
+					bodyStr += "</tr>"
+				}
 			}
 			document.getElementById('entryListTableBody').innerHTML = bodyStr;
 		},
@@ -381,8 +426,38 @@ wordsLang = {
 			}
 		},
 		
+		updateFormula: function(editElementName, property, formulaElementName, parentInsertionName, dummyInsertionElementName) {
+			var editElement = document.getElementById(editElementName);
+			var formulaElement = document.getElementById(formulaElementName);
+			if (this.isFormula(editElement[property])) {
+				if (!formulaElement) {
+					// create the DOM element
+				 	formulaElement = MathJax.HTML.Element(
+				  		"div",
+				  		{id: formulaElementName},
+				  		[editElement[property]]
+					);
+					document.getElementById(parentInsertionName).insertBefore(formulaElement, document.getElementById(dummyInsertionElementName));
+				}
+				// make the frontResult element visible
+				formulaElement.style.display = '';
+				formulaElement.innerHTML = editElement[property];
+				MathJax.Hub.Queue(["Typeset", MathJax.Hub, formulaElement]);
+			}
+			else {
+				// make the frontResult element invisible
+				formulaElement && (formulaElement.style.display = 'none');
+			}
+		},
+		
+		isFormula: function(str) {
+			return (str.indexOf('$$') !== -1);
+		},
+		
 		updateView: function() {
 			this.entryCntElement.innerHTML = wordsLang.app.entries.length;
+			document.getElementById('entryName').innerHTML = (this.entries.length === 1 ? 'card' : 'cards');
+			
 			if (this.activeView === 'entryList') {
 				wordsLang.app.buildEntryListTableBody();
 			}
@@ -397,8 +472,18 @@ wordsLang = {
 				}
 			}
 			else if (this.activeView === 'editEntry') {
-				setTimeout(function() { document.getElementById('frontEdit').focus(); });
+				this.updateFormula('frontEdit', 'value', 'frontResult', 'editEntry', 'frontResultDummy');
+				this.updateFormula('backEdit', 'value', 'backResult', 'editEntry', 'backResultDummy');
 			}
+			else if (this.activeView === 'nothingToDo') {
+				if (this.entries.length > 0) {
+					document.getElementById('proceedAnyway').style.display = '';
+				}
+				else {
+					document.getElementById('proceedAnyway').style.display = 'none';
+				}
+			}
+			
 			for (var i = 0; i < this.views.length; i++) {
 				var element = document.getElementById(this.views[i]);
 				if (this.activeView === this.views[i]) {
@@ -408,25 +493,33 @@ wordsLang = {
 					element.style.display = 'none'
 				}
 			}
-			console.log('updateView:::> localTimeStamp:', this.localTimeStamp, this.localTimeStamp <= this.webTimeStamp ? (this.localTimeStamp === this.webTimeStamp ? '=' : '<') : '>', 'webTimeStamp:', this.webTimeStamp);
-			if (this.localTimeStamp === this.webTimeStamp) {
-				// saved
+			
+			if (this.webTimeStamp === undefined) {
 				document.getElementById('saveToWebAction').style.display = 'none';
 				document.getElementById('loadFromWebAction').style.display = 'none';
-				document.getElementById('savedMessage').style.display = '';
-			}
-			else if (this.localTimeStamp > this.webTimeStamp) {
-				// saveable
-				document.getElementById('saveToWebAction').style.display = '';
-				document.getElementById('loadFromWebAction').style.display = 'none';
-				document.getElementById('savedMessage').style.display = 'none';
+				document.getElementById('statusMessage').style.display = '';
 			}
 			else {
-				// loadable
-				document.getElementById('saveToWebAction').style.display = 'none';
-				document.getElementById('loadFromWebAction').style.display = '';
-				document.getElementById('savedMessage').style.display = 'none';	
-			} 
+				console.log('updateView:::> localTimeStamp:', this.localTimeStamp, this.localTimeStamp <= this.webTimeStamp ? (this.localTimeStamp === this.webTimeStamp ? '=' : '<') : '>', 'webTimeStamp:', this.webTimeStamp);
+				if (this.localTimeStamp === this.webTimeStamp) {
+					// saved
+					document.getElementById('saveToWebAction').style.display = 'none';
+					document.getElementById('loadFromWebAction').style.display = 'none';
+					document.getElementById('statusMessage').style.display = '';
+				}
+				else if (this.localTimeStamp > this.webTimeStamp) {
+					// saveable
+					document.getElementById('saveToWebAction').style.display = '';
+					document.getElementById('loadFromWebAction').style.display = 'none';
+					document.getElementById('statusMessage').style.display = 'none';
+				}
+				else {
+					// loadable
+					document.getElementById('saveToWebAction').style.display = 'none';
+					document.getElementById('loadFromWebAction').style.display = '';
+					document.getElementById('statusMessage').style.display = 'none';	
+				} 
+			}
 		},
 	},
 	
