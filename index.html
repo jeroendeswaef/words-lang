@@ -1,6 +1,6 @@
 <!DOCTYPE HTML>
 
-<html manifest="/cache.manifest">
+<html>
 <head>
 	<title>flash cards</title>
 	<style type="text/css">
@@ -47,20 +47,6 @@
 	</style>
 </head>
 <body>
-	 <form>
-	    <input type="text" id="context"  onClick="paste();">  
-	  </form>
-
-	<script type="text/javascript"> 
-
-	function paste() {  
-
-	var sRetrieveData = clipboardData.getData("Text");
-	document.getElementById('context').value = sRetrieveData;        
-
-	}
-	</script>
-	
 	<div id="allContent">
 		<div id="header">
 			<a id="showEntryListAction" href="#"><span id="entryCnt">xx</span> <span id="entryName">entries</span></a>
@@ -137,5 +123,4 @@
 <script type="text/javascript" src="S3Ajax.js"></script>
 <script type="text/javascript" src="js3db.js"></script>
 <script type="text/javascript" src="amazon-s3-connector.js"></script>
-<script type="text/javascript" src="MathJax.js?config=default"></script>
 </html>

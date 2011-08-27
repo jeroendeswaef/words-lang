@@ -250,14 +250,6 @@ wordsLang = {
 			document.getElementById('answer').innerHTML = entry.back;
 			document.getElementById('answerDiv').style.display = '';
 			document.getElementById('questionDiv').style.display = 'none';
-			if (this.isFormula(document.getElementById('answer').innerHTML)) {
-				document.getElementById('answer').style.display = 'none';
-				this.updateFormula('answer', 'innerHTML', 'answerResult', 'answerDiv', 'answerResultDummy');
-			}
-			else {
-				document.getElementById('answerResult') && (document.getElementById('answerResult').style.display = 'none');
-				document.getElementById('answer').style.display = '';
-			}
 			this.updateView();
 		},
 		
@@ -266,14 +258,7 @@ wordsLang = {
 			this.subView = 'questionView';
 			document.getElementById('answerDiv').style.display = 'none';
 			document.getElementById('questionDiv').style.display = '';
-			if (this.isFormula(document.getElementById('question').innerHTML)) {
-				document.getElementById('question').style.display = 'none';
-				this.updateFormula('question', 'innerHTML', 'questionResult', 'askView', 'questionResultDummy');
-			}
-			else {
-				document.getElementById('questionResult') && (document.getElementById('questionResult').style.display = 'none');
-				document.getElementById('question').style.display = '';
-			}
+			
 			setTimeout(function() { document.getElementById('scratchPad').focus(); })
 		},
 		
@@ -426,34 +411,6 @@ wordsLang = {
 			}
 		},
 		
-		updateFormula: function(editElementName, property, formulaElementName, parentInsertionName, dummyInsertionElementName) {
-			var editElement = document.getElementById(editElementName);
-			var formulaElement = document.getElementById(formulaElementName);
-			if (this.isFormula(editElement[property])) {
-				if (!formulaElement) {
-					// create the DOM element
-				 	formulaElement = MathJax.HTML.Element(
-				  		"div",
-				  		{id: formulaElementName},
-				  		[editElement[property]]
-					);
-					document.getElementById(parentInsertionName).insertBefore(formulaElement, document.getElementById(dummyInsertionElementName));
-				}
-				// make the frontResult element visible
-				formulaElement.style.display = '';
-				formulaElement.innerHTML = editElement[property];
-				MathJax.Hub.Queue(["Typeset", MathJax.Hub, formulaElement]);
-			}
-			else {
-				// make the frontResult element invisible
-				formulaElement && (formulaElement.style.display = 'none');
-			}
-		},
-		
-		isFormula: function(str) {
-			return (str.indexOf('$$') !== -1);
-		},
-		
 		updateView: function() {
 			this.entryCntElement.innerHTML = wordsLang.app.entries.length;
 			document.getElementById('entryName').innerHTML = (this.entries.length === 1 ? 'card' : 'cards');
@@ -470,10 +427,6 @@ wordsLang = {
 					document.getElementById("scratchPad").setAttribute('disabled', 'disabled');
 					document.getElementById("scratchPad").blur();
 				}
-			}
-			else if (this.activeView === 'editEntry') {
-				this.updateFormula('frontEdit', 'value', 'frontResult', 'editEntry', 'frontResultDummy');
-				this.updateFormula('backEdit', 'value', 'backResult', 'editEntry', 'backResultDummy');
 			}
 			else if (this.activeView === 'nothingToDo') {
 				if (this.entries.length > 0) {
