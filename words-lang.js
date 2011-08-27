@@ -134,7 +134,7 @@ wordsLang = {
 				entries: this.entries
 			}
 			var jsonStr = JSON.stringify(cards);
-			console.log('save to web', jsonStr);
+			console.log('saveToWeb, jsonStr:', jsonStr);
 			if(this.externalStorage != null) {
 				this.externalStorage.save(jsonStr, this.savedToWeb.bindThis(this));
 			}
@@ -448,6 +448,7 @@ wordsLang = {
 			}
 			
 			if (this.webTimeStamp === undefined) {
+				console.log("updateView, webTimeStamp undefined");
 				document.getElementById('saveToWebAction').style.display = 'none';
 				document.getElementById('loadFromWebAction').style.display = 'none';
 				document.getElementById('statusMessage').style.display = '';
@@ -458,7 +459,7 @@ wordsLang = {
 					// saved
 					document.getElementById('saveToWebAction').style.display = 'none';
 					document.getElementById('loadFromWebAction').style.display = 'none';
-					document.getElementById('statusMessage').style.display = '';
+					document.getElementById('statusMessage').style.display = 'none';
 				}
 				else if (this.localTimeStamp > this.webTimeStamp) {
 					// saveable
