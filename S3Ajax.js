@@ -100,6 +100,7 @@ S3Ajax = {
             resource:     '/' + bucket + '/' + key,
             content:      content,
             content_type: params.content_type,
+			is_binary:    params.isBinary || false,
             meta:         params.meta,
             acl:          params.acl,
             load: function(req, obj) {
@@ -280,7 +281,13 @@ S3Ajax = {
 
             }
         }
-        req.send(kwArgs.content);
+		console.log("sending...", kwArgs.content, "binary?", !!kwArgs.is_binary);
+		if (kwArgs.is_binary) {
+        	req.sendAsBinary(kwArgs.content);
+		}
+		else {
+			req.send(kwArgs.content);
+		}
         return req;
     },
 

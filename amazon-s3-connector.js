@@ -39,6 +39,19 @@ S3Connector = {
         });
 	},
 	
+	uploadImage: function(contents) {
+		console.log('uploadImage');
+		var opts = { content_type: "image/jpeg; charset=UTF-8" }
+		JS3DB.setRaw("img.jpg", contents, opts,
+            function(req, obj) {
+                console.log('successfully uploaded image ');
+            },
+            function(req, obj) {
+                console.error('ERROR uploading image ' 
+                    + '. Error message ' + obj.Error.Message);
+        });
+	},
+	
 	load: function(setterFunc) {
 		JS3DB.Auth.read();
 		console.log("S3, auth exists? ", JS3DB.Auth.exists());

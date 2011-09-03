@@ -74,6 +74,37 @@ JS3DB = {
             });
 	},
 	
+	/*
+     * Attempt to save a binary object.  The contents object is serialized to a 
+     * string and then saved to the desired file.
+     * @param {String} filename The name of the file to save the contents to
+     * @param {Object} contents The object to save in the file
+     * @param {Function} cb_opt Callback function to call on success
+     * @param {Function} errcb_opt Callback function to call on error
+     */
+	setRaw : function(filename, contents, params_opt, cb_opt, errcb_opt) {
+
+		if (this.BUCKET == null) {
+			this.BUCKET = this.getBucket_();
+		}
+		
+		params_opt.isBinary = true;
+		
+        // Attempt to save the file
+	    S3Ajax.put(this.BUCKET, this.getFilename(filename), 
+            contents, params_opt,
+            function(req, obj) {
+                if (cb_opt) {
+                    return cb_opt(req, obj);
+                }
+            },
+            function(req, obj) {
+                if (errcb_opt) {
+                    return errcb_opt(req, obj);
+                }
+            });
+	},
+	
     /*
      * Attempts to get the specified file
      * @param {String} filename The filename to load

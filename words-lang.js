@@ -50,6 +50,7 @@ wordsLang = {
 				document.getElementById('backEdit').addEventListener('keypress', function() { setTimeout(function() { wordsLang.app.updateView() }, 0) }, true);
 				document.getElementById('proceedAnywayAction').addEventListener('click', this.setProceedAnyway.bindThis(this), true);
 				document.getElementById('searchBox').addEventListener('keypress', function() { setTimeout(function() { wordsLang.app.updateView() }, 0) }, true);
+				document.getElementById('uploadButton').addEventListener('click', this.uploadImage.bindThis(this), false);
 				answerActionElements = document.getElementsByName('answeredAction')
 				for(var i = 0; i < answerActionElements.length; i++) {
 					answerActionElements[i].addEventListener('click', this.clickAnswer.bindThis(this), true);
@@ -63,6 +64,21 @@ wordsLang = {
 			else {
 				alert("browser doesn't have local storage");
 			}
+		},
+		
+		uploadImage: function() {
+			var files = document.getElementById('files').files; // FileList object
+
+		    // files is a FileList of File objects. List some properties.
+		    var output = [];
+		    for (var i = 0, f; f = files[i]; i++) {
+		      output.push('<li><strong>', f.name, '</strong> (', f.type || 'n/a', ') - ',
+		                  f.size, ' bytes, binary: ',
+		                  f.getAsBinary(), '</li>');
+					this.externalStorage.uploadImage(f.getAsBinary());
+		    }
+		    document.getElementById('list').innerHTML = '<ul>' + output.join('') + '</ul>';
+			
 		},
 		
 		fillFromLocalStorage: function() {
