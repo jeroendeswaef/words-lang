@@ -44,10 +44,6 @@
 	</style>
 </head>
 <body>
-	<input type="file" id="files" name="files[]" />
-	<input type="button" id="uploadButton" value="upload" />
-	<output id="list"></output>
-
 	<div id="allContent">
 		<div id="header">
 			<a id="showEntryListAction" href="#"><span id="entryCnt">xx</span> <span id="entryName">entries</span></a>
@@ -60,7 +56,10 @@
 		</div>
 		<div id="editEntry" style="display: none">
 			Front:<br />
-			<textarea id="frontEdit" rows="3" cols="40"></textarea>
+			<textarea id="frontEdit" rows="3" cols="40"></textarea><br />
+			<div id="editFrontImageDummy"></div><br />
+			<input type="file" id="frontImageFile" name="frontImageFile[]" />
+			<input type="button" id="uploadFrontImage" value="upload" />
 			<div id="frontResultDummy"></div><br /><br />
 			Back:<br />
 			<textarea id="backEdit" rows="3" cols="40"></textarea>
@@ -88,7 +87,8 @@
 			</table>
 		</div>
 		<div id="askView" style="display: none">
-			<div id="question"></div>
+			<div id="question"></div><br />
+			<div id="questionFrontImageDummy"></div><br />
 			<div id="questionResultDummy"></div>
 			<br />
 			<textarea id="scratchPad" rows="3" cols="40"></textarea><br /><br />

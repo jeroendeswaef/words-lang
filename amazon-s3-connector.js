@@ -39,12 +39,13 @@ S3Connector = {
         });
 	},
 	
-	uploadImage: function(contents) {
+	uploadImage: function(name, contents, contentType, successCallBack) {
 		console.log('uploadImage');
-		var opts = { content_type: "image/jpeg; charset=UTF-8" }
-		JS3DB.setRaw("img.jpg", contents, opts,
+		var opts = { content_type: ((contentType || "image/jpeg") + "; charset=UTF-8") }
+		JS3DB.setRaw("images/" + name, contents, opts,
             function(req, obj) {
                 console.log('successfully uploaded image ');
+				successCallBack(name);
             },
             function(req, obj) {
                 console.error('ERROR uploading image ' 

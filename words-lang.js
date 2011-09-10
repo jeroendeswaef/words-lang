@@ -50,7 +50,7 @@ wordsLang = {
 				document.getElementById('backEdit').addEventListener('keypress', function() { setTimeout(function() { wordsLang.app.updateView() }, 0) }, true);
 				document.getElementById('proceedAnywayAction').addEventListener('click', this.setProceedAnyway.bindThis(this), true);
 				document.getElementById('searchBox').addEventListener('keypress', function() { setTimeout(function() { wordsLang.app.updateView() }, 0) }, true);
-				document.getElementById('uploadButton').addEventListener('click', this.uploadImage.bindThis(this), false);
+				document.getElementById('uploadFrontImage').addEventListener('click', this.uploadFrontImage.bindThis(this), false);
 				answerActionElements = document.getElementsByName('answeredAction')
 				for(var i = 0; i < answerActionElements.length; i++) {
 					answerActionElements[i].addEventListener('click', this.clickAnswer.bindThis(this), true);
@@ -66,21 +66,49 @@ wordsLang = {
 			}
 		},
 		
-		uploadImage: function() {
-			var files = document.getElementById('files').files; // FileList object
-
-		    // files is a FileList of File objects. List some properties.
-		    var output = [];
-		    for (var i = 0, f; f = files[i]; i++) {
-		      output.push('<li><strong>', f.name, '</strong> (', f.type || 'n/a', ') - ',
-		                  f.size, ' bytes, binary: ',
-		                  f.getAsBinary(), '</li>');
-					this.externalStorage.uploadImage(f.getAsBinary());
-		    }
-		    document.getElementById('list').innerHTML = '<ul>' + output.join('') + '</ul>';
-			
+		uploadFrontImage: function() {
+			var files = document.getElementById('frontImageFile').files; // FileList object
+			var f = files[0]
+			console.info('uploading', f.name)
+			var fileName = wordsLang.utilities.generateRandomString(15);
+			this.externalStorage.uploadImage(fileName, f.getAsBinary(), f.type, this.fillEditFrontImage.bindThis(this));
 		},
-		
+		fillEditFrontImage: function(imageName) {
+			console.log("fillEditFrontImage", imageName);
+			var el = document.createElement("img");
+			el.setAttribute("src", "images/" + imageName);
+			var parent = document.getElementById('editFrontImageDummy');
+			parent.setAttribute("imageName", imageName);
+			parent.appendChild(el);
+		},
+		removeEditFrontImage: function() {
+			console.log("removeEditFrontImage")
+			var parent = document.getElementById('editFrontImageDummy');
+			parent.removeAttribute("imageName")
+			if (parent.hasChildNodes()){
+			    while (parent.childNodes.length >= 1){
+			        parent.removeChild(parent.firstChild);       
+			    } 
+			}
+		},
+		fillQuestionFrontImage: function(imageName) {
+			console.log("fillQuestionFrontImage", imageName);
+			var el = document.createElement("img");
+			el.setAttribute("src", "images/" + imageName);
+			var parent = document.getElementById('questionFrontImageDummy');
+			parent.setAttribute("imageName", imageName);
+			parent.appendChild(el);
+		},
+		removeQuestionFrontImage: function() {
+			console.log("removeQuestionFrontImage")
+			var parent = document.getElementById('questionFrontImageDummy');
+			parent.removeAttribute("imageName")
+			if (parent.hasChildNodes()){
+			    while (parent.childNodes.length >= 1){
+			        parent.removeChild(parent.firstChild);       
+			    } 
+			}
+		},
 		fillFromLocalStorage: function() {
 			console.log('fillFromLocalStorage, timeStamp: ' + localStorage.getItem("wordsLangTimeStamp"));
 			wordsLang.app.entries = []
@@ -103,6 +131,9 @@ wordsLang = {
 						lastSeen: lastSeen,
 						interval: parseInt(parts[3]),
 						easeFactor: parseFloat(parts[4])
+					}
+					if (parts[5] !== "") {
+						entry.imageName = parts[5];
 					}
 					wordsLang.app.entries.push(entry);
 				}
@@ -138,7 +169,8 @@ wordsLang = {
 				var entry = wordsLang.app.entries[i];
 				var lastSeenStr = this.getLastSeenStr(entry);
 				var entryStr = entry.front + "|-|" + entry.back + "|-|" 
-					+ lastSeenStr + "|-|" + entry.interval + "|-|" + entry.easeFactor
+					+ lastSeenStr + "|-|" + entry.interval + "|-|" + entry.easeFactor +
+					+ "|-|" + (entry.imageName || "") 
 				localStorage.setItem("wordsLangEntry-" + i, entryStr);
 			}
 		},
@@ -192,6 +224,7 @@ wordsLang = {
 					interval: rawObj[i].interval,
 					easeFactor: rawObj[i].easeFactor
 				}
+				if (rawObj[i].imageName) entry.imageName = rawObj[i].imageName;
 				obj.push(entry);
 			}
 			this.entries = obj;
@@ -245,6 +278,10 @@ wordsLang = {
 				interval: 0,
 				easeFactor: 2.5
 			};
+			var imageName = document.getElementById('frontImageDummy').getAttribute("imageName");
+			if (imageName) {
+				entry.imageName = imageName;
+			}
 			this.modifyEntries( function() {
 				this.entries[index] = entry;
 			}.bindThis(this));
@@ -311,6 +348,7 @@ wordsLang = {
 		},
 		
 		nextQuestion: function() {
+			console.log("nextQuestion");
 			var questionFound = false;
 			var newEntryId = undefined;
 			if (this.proceedAnyway && this.entries.length > 0) {
@@ -327,8 +365,15 @@ wordsLang = {
 				}
 			}
 			if (questionFound) {
+				console.log("question found", newEntryId, this.entries[newEntryId])
 				this.currentQuestionEntryId = newEntryId;
 				document.getElementById('question').innerHTML = this.entries[newEntryId].front;
+				if (this.entries[newEntryId].imageName) {
+					this.fillQuestionFrontImage(this.entries[newEntryId].imageName)
+				}
+				else {
+					this.removeQuestionFrontImage();
+				}
 				this.showQuestion();
 			}
 			else {
@@ -347,6 +392,7 @@ wordsLang = {
 		
 		cleanCreateView: function() {
 			this.saveEntryActionElement.setAttribute('entryId', -1);
+			this.removeEditFrontImage();
 			this.frontEditElement.value = '';
 			this.backEditElement.value = '';
 		},
@@ -500,6 +546,15 @@ wordsLang = {
 	  		} catch (e) {
 	    		return false;
 	  		}
+		},
+		generateRandomString: function(stringLength) {
+			var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
+			var randomstring = '';
+			for (var i = 0; i < stringLength; i++) {
+				var rnum = Math.floor(Math.random() * chars.length);
+				randomstring += chars.substring(rnum,rnum+1);
+			}
+			return randomstring;
 		}
 	}
 }
