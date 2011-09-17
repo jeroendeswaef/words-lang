@@ -58,7 +58,6 @@ wordsLang = {
 				
 				this.fillFromLocalStorage();
 				this.loadFromWeb();
-				this.nextQuestion();
 				this.updateView();
 			}
 			else {
@@ -120,6 +119,7 @@ wordsLang = {
 			for(var i = 0; i < localStorage.length; i++) {
 				var str = localStorage.getItem(localStorage.key(i));
 				if (localStorage.key(i).indexOf('wordsLangEntry') == 0) {
+					console.log('local storage entry', str)
 					var parts = str.split("|-|");
 					var lastSeen = null
 					if (parts[2] && parts[2] != "") {
@@ -169,7 +169,7 @@ wordsLang = {
 				var entry = wordsLang.app.entries[i];
 				var lastSeenStr = this.getLastSeenStr(entry);
 				var entryStr = entry.front + "|-|" + entry.back + "|-|" 
-					+ lastSeenStr + "|-|" + entry.interval + "|-|" + entry.easeFactor +
+					+ lastSeenStr + "|-|" + entry.interval + "|-|" + entry.easeFactor
 					+ "|-|" + (entry.imageName || "") 
 				localStorage.setItem("wordsLangEntry-" + i, entryStr);
 			}
@@ -211,6 +211,7 @@ wordsLang = {
 				this.saveToLocalStorage();
 			} 
 			this.webTimeStamp = obj.savedTimeStamp;
+			this.nextQuestion();
 			this.updateView();
 		},
 		
@@ -278,7 +279,8 @@ wordsLang = {
 				interval: 0,
 				easeFactor: 2.5
 			};
-			var imageName = document.getElementById('frontImageDummy').getAttribute("imageName");
+			var imageName = document.getElementById('editFrontImageDummy').getAttribute("imageName");
+			console.log('image name', imageName);
 			if (imageName) {
 				entry.imageName = imageName;
 			}
@@ -369,6 +371,7 @@ wordsLang = {
 				this.currentQuestionEntryId = newEntryId;
 				document.getElementById('question').innerHTML = this.entries[newEntryId].front;
 				if (this.entries[newEntryId].imageName) {
+					this.removeQuestionFrontImage();
 					this.fillQuestionFrontImage(this.entries[newEntryId].imageName)
 				}
 				else {
@@ -407,6 +410,10 @@ wordsLang = {
 		editEntry: function(id) {
 			this.frontEditElement.value = this.entries[id].front;
 			this.backEditElement.value = this.entries[id].back;
+			this.removeEditFrontImage();
+			if (this.entries[id].imageName) {
+				this.fillEditFrontImage(this.entries[id].imageName)
+			}
 			wordsLang.app.activeView = 'editEntry';
 			this.saveEntryActionElement.setAttribute('entryId', id);
 			wordsLang.app.updateView();
